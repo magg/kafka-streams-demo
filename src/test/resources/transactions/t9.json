@@ -1,0 +1,35 @@
+{
+  "id": "155034258_5339220718488005_2020-06-02",
+  "version": 0,
+  "providerId": "CACAO",
+  "money": {
+    "currencyCode": "MXN",
+    "units": "-600",
+    "nanos": 0
+  },
+  "source": {
+    "internalId": "c3525be4-071e-11eb-9540-336915ec7bb1",
+    "externalId": {
+      "type": "NONE",
+      "cardNumber": "5339220718488005"
+    }
+  },
+  "target": {
+    "internalId": ""
+  },
+  "referenceId": "",
+  "state": "SETTLED",
+  "type": "PURCHASE",
+  "shortDescription": "Compra                                  ",
+  "description": "PAYHUB TELECOM                ",
+  "timestampInMs": "1591074000000",
+  "providerData": {
+    "cardData": {
+      "mccCode": "4814",
+      "mccDescription": "SERVICIOS DE TELECOMUNICA",
+      "merchantName": "PAYHUB TELECOM                ",
+      "merchantId": "",
+      "merchantLocation": ""
+    }
+  }
+}

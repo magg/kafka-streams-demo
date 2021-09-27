@@ -1,0 +1,35 @@
+{
+  "id": "c47fe00e-071e-11eb-9ac9-a3fd97d0a241",
+  "version": 0,
+  "providerId": "CACAO",
+  "money": {
+    "currencyCode": "MXN",
+    "units": "100",
+    "nanos": 0
+  },
+  "source": {
+    "internalId": "c3525be4-071e-11eb-9540-336915ec7bb1",
+    "externalId": {
+      "type": "NONE",
+      "cardNumber": "5339220718488005"
+    }
+  },
+  "target": {
+    "internalId": ""
+  },
+  "referenceId": "",
+  "state": "SETTLED",
+  "type": "UNKNOWN_TYPE",
+  "shortDescription": "RECARGA                                 ",
+  "description": "Cacao Payment - Weex          ",
+  "timestampInMs": "1601911432930",
+  "providerData": {
+    "cardData": {
+      "mccCode": "",
+      "mccDescription": "",
+      "merchantName": "",
+      "merchantId": "",
+      "merchantLocation": ""
+    }
+  }
+}

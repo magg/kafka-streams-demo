@@ -1,0 +1,16 @@
+{
+  "accountId": {
+    "internalId": "c3525be4-071e-11eb-9540-336915ec7bb1"
+  },
+  "providerId": "CACAO",
+  "currentBalance": {
+    "currencyCode": "MXN",
+    "units": "30",
+    "nanos": 850000000
+  },
+  "availableBalance": {
+    "currencyCode": "MXN",
+    "units": "30",
+    "nanos": 850000000
+  }
+}

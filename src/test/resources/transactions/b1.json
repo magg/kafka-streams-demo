@@ -1,0 +1,40 @@
+{
+  "id": "4c6b5f68-0c96-487a-ace9-6cf342ecce59",
+  "userId": "f55311a7-7b7b-459f-9edb-ebe8a9169cd7",
+  "balances": [{
+    "currentBalance": {
+      "currencyCode": "MXN",
+      "units": "100",
+      "nanos": 0
+    },
+    "availableBalance": {
+      "currencyCode": "MXN",
+      "units": "100",
+      "nanos": 0
+    },
+    "timestampInMs": "1601911432730",
+    "providerAccountBalances": [{
+      "internalId": "c3525be4-071e-11eb-9540-336915ec7bb1",
+      "providerId": "STP",
+      "currentBalance": {
+        "currencyCode": "MXN",
+        "units": "100",
+        "nanos": 0
+      },
+      "availableBalance": {
+        "currencyCode": "MXN",
+        "units": "100",
+        "nanos": 0
+      },
+      "lastUpdateTimestampInMs": "1601911432730",
+      "lastProcessedTransactionId": "balance-sync"
+    }],
+    "balanceType": "MXN_CREDIT"
+  }],
+  "balanceSyncEventUpdate": {
+    "accountInternalId": "c3525be4-071e-11eb-9540-336915ec7bb1",
+    "providerId": "STP",
+    "timestampInMs": "1601911432730"
+  },
+  "timestampInMs": "1601911432730"
+}

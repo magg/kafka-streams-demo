@@ -1,0 +1,26 @@
+kafka:
+  enabled: true
+  bootstrap-servers: localhost:9092
+  consumer-group: ${spring.application.name}
+
+spring:
+  application:
+    name: test-app-115
+  kafka:
+    streams:
+      application-id: sampleStreamsApp-115
+  cloud:
+    zookeeper:
+      connect-string: ${ZOOKEEPER_SERVER:localhost:2181}
+
+
+local:
+  stream:
+    name: pairing-stream-app
+    input: sample-messages
+    output: pairs-of-messages
+    store: pairs-store
+  kafka:
+    bootstrap-servers: localhost:9092
+  consumer:
+    groupId: pair-logger-consumer

@@ -1,0 +1,28 @@
+{
+  "id": "643713_5339220718488005_2020-06-02",
+  "version": 0,
+  "providerId": "CACAO",
+  "money": {
+    "currencyCode": "MXN",
+    "units": "500",
+    "nanos": 0
+  },
+  "source": {
+    "internalId": "c3525be4-071e-11eb-9540-336915ec7bb1",
+    "externalId": {
+      "type": "NONE",
+      "cardNumber": "5339220718488005"
+    }
+  },
+  "target": {
+    "internalId": ""
+  },
+  "referenceId": "",
+  "state": "SETTLED",
+  "type": "PURCHASE",
+  "shortDescription": "",
+  "description": "PAYHUB TELECOM         (044) 231-719 UKR",
+  "timestampInMs": "1601911434930",
+  "providerData": {
+  }
+}
