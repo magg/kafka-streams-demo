@@ -6,6 +6,8 @@ import static mx.klar.kafka.spring.config.KafkaProtoClassUtil.getProtoClassHeade
 import static mx.klar.kafka.spring.config.KafkaProtoClassUtil.getProtoClassParser;
 import static mx.klar.kafka.spring.config.KafkaProtoClassUtil.getProtoClassesInPaths;
 
+import com.example.demo.extractors.BalanceEventTimestampExtractor;
+import com.example.demo.extractors.TransactionTimestampExtractor;
 import com.github.daniel.shuy.kafka.protobuf.serde.KafkaProtobufDeserializer;
 import com.github.daniel.shuy.kafka.protobuf.serde.KafkaProtobufSerializer;
 import com.google.common.collect.ImmutableList;
@@ -14,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.Data;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +28,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.GlobalKTable;
 import org.apache.kafka.streams.kstream.Grouped;
@@ -34,6 +38,8 @@ import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.StreamJoined;
+import org.apache.kafka.streams.kstream.ValueJoiner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -71,6 +77,7 @@ public class KafkaConfig {
   private final Emailer emailer;
   private final Mailer mailer;
 
+
   public KafkaConfig() {
     this.emailer = new LoggingEmailer();
     this.mailer = new TestMailer();
@@ -85,7 +92,7 @@ public class KafkaConfig {
 
 
 
-  @Bean
+  //@Bean
   KafkaStreams createUserProviderAccountCommandAndResultJoinedStream(
       StreamsBuilder streamsBuilder) {
     // the two topics has to be co-partitioned here, 128 partitions and same partition
@@ -182,7 +189,7 @@ public class KafkaConfig {
     return new KafkaStreams(streamsBuilder.build(),providerAccountStreamAppConfigs().asProperties());
   }
 
-  //@Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
+  @Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
   public KafkaStreamsConfiguration providerAccountStreamAppConfigs() {
     Map<String, Object> config = new HashMap<>();
     config.put(StreamsConfig.APPLICATION_ID_CONFIG, streamingAppName);
@@ -190,7 +197,61 @@ public class KafkaConfig {
     config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
     config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.StringSerde.class);
     config.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE);
+    config.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, 1);
+
     return new KafkaStreamsConfiguration(config);
+  }
+
+
+  @Bean
+  public Topology kafkaStreamTopology() {
+    final StreamsBuilder streamsBuilder = new StreamsBuilder();
+
+    Consumed<String, TransactionEvent> transactionEventOptions =
+        Consumed.with(STRING_SERDE, StreamConstants.TRANSACTION_EVENT_SERDE)
+            .withTimestampExtractor(new TransactionTimestampExtractor());
+
+    KStream<String, TransactionEvent> transactions =
+        streamsBuilder
+            .stream(TRANSACTION_EVENT_TOPIC_NAME, transactionEventOptions)
+            .selectKey((s, transactionEvent) -> transactionEvent.getId());
+
+
+    Consumed<String, BalanceEvent> balanceEventOptions =
+        Consumed.with(STRING_SERDE, StreamConstants.BALANCE_EVENT_SERDE)
+            .withTimestampExtractor(new BalanceEventTimestampExtractor());
+
+    KStream<String, BalanceEvent> balance =
+        streamsBuilder
+            .stream(BALANCE_EVENTS_TOPIC, balanceEventOptions)
+            .selectKey((s, balanceEvent) -> balanceEvent.getTransactionEventUpdate().getTransactionEventId().replaceAll("T:", ""));
+
+    final StreamJoined<String, TransactionEvent, BalanceEvent> joinParams =
+        StreamJoined.with(STRING_SERDE, StreamConstants.TRANSACTION_EVENT_SERDE, StreamConstants.BALANCE_EVENT_SERDE);
+
+    JoinWindows joinWindows = JoinWindows
+        .of(Duration.ofHours(23))
+        .grace(Duration.ofHours(2));
+
+    ValueJoiner<TransactionEvent, BalanceEvent ,Pair<TransactionEvent, BalanceEvent>> valueJoiner =
+        Pair::of;
+
+    transactions
+        .join(balance, valueJoiner, joinWindows, joinParams)
+        .peek((key, emailTuple) -> mailer.sendEmail(emailTuple));
+
+    return streamsBuilder.build();
+  }
+
+  @Bean
+  public KafkaStreams kafkaStreams() {
+
+
+    final KafkaStreams kafkaStreams = new KafkaStreams(kafkaStreamTopology(), providerAccountStreamAppConfigs().asProperties());
+    kafkaStreams.start();
+
+    return kafkaStreams;
+
   }
 
 
@@ -275,8 +336,11 @@ public class KafkaConfig {
 
   private static class LoggingEmailer implements Emailer {
 
+    private AtomicInteger counter = new AtomicInteger(0);;
+
     @Override public void sendEmail(final EmailTuple details) {
       //In a real implementation we would do something a little more useful
+      log.info("counter {} ", counter.incrementAndGet());
       log.warn("Sending email: \nCustomer:{}\nOrder: {}\n", details.transactionEvent, details.balanceEvent);
     }
   }
@@ -287,8 +351,12 @@ public class KafkaConfig {
 
   private static class TestMailer implements Mailer {
 
+    private AtomicInteger counter = new AtomicInteger(0);;
+
+
     @Override public void sendEmail(final Pair<TransactionEvent, BalanceEvent>  details) {
       //In a real implementation we would do something a little more useful
+      log.info("counter {} ", counter.incrementAndGet());
       log.warn("Sending email: \nCustomer:{}\nOrder: {}\n", details.getLeft(), details.getRight());
     }
   }

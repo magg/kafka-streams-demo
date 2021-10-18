@@ -5,10 +5,10 @@ kafka:
 
 spring:
   application:
-    name: test-app-115
+    name: test-app-124
   kafka:
     streams:
-      application-id: sampleStreamsApp-115
+      application-id: sampleStreamsApp-124
   cloud:
     zookeeper:
       connect-string: ${ZOOKEEPER_SERVER:localhost:2181}

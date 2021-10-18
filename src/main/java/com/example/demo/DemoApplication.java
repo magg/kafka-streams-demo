@@ -17,7 +17,7 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.annotation.EnableKafkaStreams;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@EnableKafkaStreams
+//@EnableKafkaStreams
 @EnableKafka
 @SpringBootApplication
 @ComponentScan(excludeFilters  = {@ComponentScan.Filter(
