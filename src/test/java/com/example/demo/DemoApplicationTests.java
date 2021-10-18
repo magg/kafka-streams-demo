@@ -93,6 +93,12 @@ public class DemoApplicationTests {
 	public void buildEventDay() {
 
 
+		String bSyncPath = "\\transactions\\t1-b.json";
+
+		BalanceSyncEvent.Builder bsBuilder =
+				JsonProtoUtils.readFromJson(bSyncPath, BalanceSyncEvent.newBuilder(), protobufParser);
+
+		transactionProducer.publishSync(bsBuilder.build());
 
 		for (int i = 1; i <= 100; i++) {
 

@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import mx.klar.balance.common.Protos.BalanceEvent;
 import mx.klar.provider.common.proto.TransactionProtos.TransactionEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
@@ -207,15 +208,19 @@ public class KafkaConfig {
   public Topology kafkaStreamTopology() {
     final StreamsBuilder streamsBuilder = new StreamsBuilder();
 
-    Consumed<String, TransactionEvent> transactionEventOptions =
-        Consumed.with(STRING_SERDE, StreamConstants.TRANSACTION_EVENT_SERDE)
+    Serde<Object>
+        mySerde = Serdes.serdeFrom(buildDelegatingSerializer(), buildDelegatingDeserializer());
+
+    Consumed<String, Object> transactionEventOptions =
+        Consumed.with(STRING_SERDE, mySerde)
             .withTimestampExtractor(new TransactionTimestampExtractor());
 
     KStream<String, TransactionEvent> transactions =
         streamsBuilder
             .stream(TRANSACTION_EVENT_TOPIC_NAME, transactionEventOptions)
+            .filter((key, value) -> value.getClass().getSimpleName().equals("TransactionEvent"))
+            .mapValues(event -> (TransactionEvent) event)
             .selectKey((s, transactionEvent) -> transactionEvent.getId());
-
 
     Consumed<String, BalanceEvent> balanceEventOptions =
         Consumed.with(STRING_SERDE, StreamConstants.BALANCE_EVENT_SERDE)
