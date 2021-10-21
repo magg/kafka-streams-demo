@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import mx.klar.balance.common.Protos.BalanceEvent;
 import mx.klar.provider.common.proto.TransactionProtos.BalanceSyncEvent;
 import mx.klar.provider.common.proto.TransactionProtos.TransactionEvent;
+import mx.klar.test.common.Protos.CombinedEvent;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes.StringSerde;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -32,6 +33,10 @@ final class StreamConstants {
 
   static final Serde<BalanceSyncEvent> BALANCE_SYNC_EVENT_SERDE =
       new KafkaProtobufSerde<>(BalanceSyncEvent.parser());
+
+  static final Serde<CombinedEvent> COMBINED_EVENT_SERDE =
+      new KafkaProtobufSerde<>(CombinedEvent.parser());
+
 
   // serializer
   static final StringSerializer STRING_SERIALIZER = new StringSerializer();

@@ -14,7 +14,7 @@
     },
     "timestampInMs": "1601911432704",
     "providerAccountBalances": [{
-      "internalId": "c3525be4-071e-11eb-9540-336915ec7bb1",
+      "internalId": "ACCOUNT_REPLACE",
       "providerId": "STP",
       "currentBalance": {
         "currencyCode": "MXN",

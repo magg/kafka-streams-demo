@@ -24,12 +24,13 @@ public class JsonProtoUtils {
 
 
   public static <T extends Message.Builder> T readFromJsonReplaceId(
-      String jsonPath, T builder, JsonFormat.Parser protobufParser, String id) throws IOException {
+      String jsonPath, T builder, JsonFormat.Parser protobufParser, String id, String accountId) throws IOException {
     Resource resource = new ClassPathResource(jsonPath);
     String jsonEvent = FileUtils.readFileToString(resource.getFile(),
         String.valueOf(StandardCharsets.UTF_8));
 
     jsonEvent = jsonEvent.replaceAll("TO_REPLACE", id);
+    jsonEvent = jsonEvent.replaceAll("ACCOUNT_REPLACE", accountId);
 
     protobufParser.merge(jsonEvent, builder);
     return builder;

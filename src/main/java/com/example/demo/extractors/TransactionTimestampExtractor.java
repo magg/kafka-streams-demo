@@ -9,7 +9,7 @@ public class TransactionTimestampExtractor implements TimestampExtractor {
   @Override
   public long extract(ConsumerRecord<Object, Object> record, long partitionTime) {
 
-    if (record.value().getClass().getSimpleName().equals("TransactionEvent")) {
+    if (record.value() instanceof TransactionEvent) {
       TransactionEvent transactionEvent = (TransactionEvent) record.value();
 
       if (transactionEvent != null && transactionEvent.getTimestampInMs() != 0L) {

@@ -9,6 +9,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
+import java.util.UUID;
 import lombok.SneakyThrows;
 import mx.klar.balance.common.Protos.BalanceEvent;
 import mx.klar.provider.common.proto.TransactionProtos.BalanceSyncEvent;
@@ -20,10 +22,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.context.annotation.Profile;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 
-
+@Profile("test")
+@ActiveProfiles("test")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @EnableConfigurationProperties
+@TestPropertySource(
+		properties = {
+				"kafka.bootstrap-servers=localhost:9093",
+		}
+)
+
 public class DemoApplicationTests {
 
 
@@ -36,7 +48,7 @@ public class DemoApplicationTests {
 	private List<TransactionEvent> eventList = new ArrayList<>();
 	private List<BalanceSyncEvent> eventSyncList = new ArrayList<>();
 	private List<BalanceEvent> eventBalanceList = new ArrayList<>();
-
+	private List<Integer> accountList = List.of(666, 777, 888, 999, 1999);
 
 
 	List<String> eventFiles =
@@ -65,7 +77,6 @@ public class DemoApplicationTests {
 				TransactionEvent e = eventBuilder.build();
 				eventList.add(e);
 			}
-
 
 		}
 
@@ -108,20 +119,33 @@ public class DemoApplicationTests {
 
 			String updatedPath = "\\transactions\\" + "b_template" + ".json";
 
+			int number = getRandomNumberUsingNextInt(0, accountList.size() - 1);
+
 			BalanceEvent.Builder eventBuilder =
-					JsonProtoUtils.readFromJsonReplaceId(updatedPath, BalanceEvent.newBuilder(), protobufParser, String.valueOf(i));
+					JsonProtoUtils.readFromJsonReplaceId(updatedPath,
+							BalanceEvent.newBuilder(),
+							protobufParser,
+							String.valueOf(i),
+							String.valueOf(accountList.get(number)));
 
 			ldt = ldt.plusMinutes(i * 5);
 			ldt = ldt.plusSeconds(i * 20);
 			ZonedDateTime zdt = ldt.atZone(ZoneId.of("America/Mexico_City"));
 			eventBuilder.setTimestampInMs(zdt.toInstant().toEpochMilli());
+			eventBuilder.setUserId(UUID.randomUUID().toString());
 			BalanceEvent be = eventBuilder.build();
 			balanceProducer.publish(be);
 
 			String tPath = "\\transactions\\" + "t_template" + ".json";
 
 			Builder eventBuilderT =
-					JsonProtoUtils.readFromJsonReplaceId(tPath, TransactionEvent.newBuilder(), protobufParser, String.valueOf(i));
+					JsonProtoUtils.readFromJsonReplaceId(
+							tPath,
+							TransactionEvent.newBuilder(),
+							protobufParser,
+							String.valueOf(i),
+							String.valueOf(accountList.get(number))
+							);
 
 
 			ldtTransaction = ldtTransaction.plusMinutes(i * 2);
@@ -132,6 +156,12 @@ public class DemoApplicationTests {
 			TransactionEvent t = eventBuilderT.build();
 			transactionProducer.publish(t);
 		}
+	}
+
+
+	public int getRandomNumberUsingNextInt(int min, int max) {
+		Random random = new Random();
+		return random.nextInt(max - min) + min;
 	}
 
 }

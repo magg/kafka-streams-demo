@@ -1,18 +1,18 @@
 kafka:
   enabled: true
-  bootstrap-servers: kafka:9092
+  bootstrap-servers: localhost:9093
   consumer-group: ${spring.application.name}
 
 spring:
   application:
-    name: ${WORKER_NAME}
+    name: lol
   kafka:
     streams:
       application-id: joinStreamsApp-130
-    bootstrap-servers: kafka:9092
+    bootstrap-servers: localhost:9093
   cloud:
     zookeeper:
-      connect-string: ${ZOOKEEPER_SERVER:zookeper:2181}
+      connect-string: ${ZOOKEEPER_SERVER:localhost:2181}
 
 
 local:
@@ -22,6 +22,6 @@ local:
     output: pairs-of-messages
     store: pairs-store
   kafka:
-    bootstrap-servers: kafka:9092
+    bootstrap-servers: localhost:9093
   consumer:
     groupId: pair-logger-consumer

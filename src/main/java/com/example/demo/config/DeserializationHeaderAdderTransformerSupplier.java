@@ -26,10 +26,11 @@ public class DeserializationHeaderAdderTransformerSupplier<K, V extends MessageL
 
       @Override
       public KeyValue<K, V> transform(K key, V value) {
+        this.processorContext.headers().remove(DelegatingSerializer.VALUE_SERIALIZATION_SELECTOR);
         this.processorContext.headers().add(new Header() {
           @Override
           public String key() {
-            return DelegatingSerializer.KEY_SERIALIZATION_SELECTOR;
+            return DelegatingSerializer.VALUE_SERIALIZATION_SELECTOR;
           }
 
           @Override

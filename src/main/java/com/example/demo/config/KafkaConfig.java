@@ -1,5 +1,6 @@
 package com.example.demo.config;
 
+import static com.example.demo.config.StreamConstants.COMBINED_EVENT_SERDE;
 import static com.example.demo.config.StreamConstants.STRING_SERDE;
 import static mx.klar.balance.common.constants.KafkaTopics.BALANCE_EVENTS_TOPIC;
 import static mx.klar.kafka.spring.config.KafkaProtoClassUtil.getProtoClassHeaderLabel;
@@ -22,22 +23,19 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import mx.klar.balance.common.Protos.BalanceEvent;
 import mx.klar.provider.common.proto.TransactionProtos.TransactionEvent;
+import mx.klar.test.common.Protos.CombinedEvent;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.kstream.GlobalKTable;
-import org.apache.kafka.streams.kstream.Grouped;
 import org.apache.kafka.streams.kstream.JoinWindows;
 import org.apache.kafka.streams.kstream.Joined;
 import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.KTable;
-import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.StreamJoined;
 import org.apache.kafka.streams.kstream.ValueJoiner;
@@ -45,9 +43,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
 import org.springframework.kafka.config.KafkaStreamsConfiguration;
 import org.springframework.kafka.config.StreamsBuilderFactoryBeanCustomizer;
+import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.support.serializer.DelegatingDeserializer;
 import org.springframework.kafka.support.serializer.DelegatingSerializer;
 
@@ -61,6 +59,7 @@ import static mx.klar.provider.common.TransactionTopics.TRANSACTION_EVENT_TOPIC_
 @Slf4j
 public class KafkaConfig {
 
+  public static final String COMBINED_EVENTS_TOPIC = "CombinedEvents";
   @Value("${local.stream.store}") private String stateStoreName;
   @Value("${local.stream.input}") private String inputTopic;
   @Value("${local.stream.output}") private String outputTopic;
@@ -162,8 +161,8 @@ public class KafkaConfig {
         .join(transactions,
             (result, trans) -> Pair.of(
              trans, result
-            ), resultEventJoinWindow,serdes)
-        .peek((key, emailTuple) -> mailer.sendEmail(emailTuple));
+            ), resultEventJoinWindow,serdes);
+
 
     /*
 
@@ -190,7 +189,7 @@ public class KafkaConfig {
     return new KafkaStreams(streamsBuilder.build(),providerAccountStreamAppConfigs().asProperties());
   }
 
-  @Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
+  //@Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
   public KafkaStreamsConfiguration providerAccountStreamAppConfigs() {
     Map<String, Object> config = new HashMap<>();
     config.put(StreamsConfig.APPLICATION_ID_CONFIG, streamingAppName);
@@ -208,17 +207,16 @@ public class KafkaConfig {
   public Topology kafkaStreamTopology() {
     final StreamsBuilder streamsBuilder = new StreamsBuilder();
 
-    Serde<Object>
-        mySerde = Serdes.serdeFrom(buildDelegatingSerializer(), buildDelegatingDeserializer());
+    Serde<?> mySerde = Serdes.serdeFrom(buildDelegatingSerializer(), buildDelegatingDeserializer());
 
-    Consumed<String, Object> transactionEventOptions =
+    Consumed<String, ?> transactionEventOptions =
         Consumed.with(STRING_SERDE, mySerde)
             .withTimestampExtractor(new TransactionTimestampExtractor());
 
     KStream<String, TransactionEvent> transactions =
         streamsBuilder
             .stream(TRANSACTION_EVENT_TOPIC_NAME, transactionEventOptions)
-            .filter((key, value) -> value.getClass().getSimpleName().equals("TransactionEvent"))
+            .filter((key, value) ->  value instanceof TransactionEvent)
             .mapValues(event -> (TransactionEvent) event)
             .selectKey((s, transactionEvent) -> transactionEvent.getId());
 
@@ -238,12 +236,19 @@ public class KafkaConfig {
         .of(Duration.ofHours(23))
         .grace(Duration.ofHours(2));
 
-    ValueJoiner<TransactionEvent, BalanceEvent ,Pair<TransactionEvent, BalanceEvent>> valueJoiner =
-        Pair::of;
+    ValueJoiner<TransactionEvent, BalanceEvent , CombinedEvent> valueJoiner =
+        (transactionEvent, balanceEvent) -> CombinedEvent
+            .newBuilder()
+            .setBalance(balanceEvent)
+            .setTransaction(transactionEvent)
+            .build();
 
     transactions
         .join(balance, valueJoiner, joinWindows, joinParams)
-        .peek((key, emailTuple) -> mailer.sendEmail(emailTuple));
+        .selectKey((result, combinedEvent)-> combinedEvent.getTransaction().getSource().getInternalId())
+        .transform(new DeserializationHeaderAdderTransformerSupplier<>())
+        .peek((key, emailTuple) -> mailer.sendEmail(emailTuple))
+        .to(COMBINED_EVENTS_TOPIC, Produced.with(Serdes.String(), COMBINED_EVENT_SERDE));
 
     return streamsBuilder.build();
   }
@@ -257,6 +262,31 @@ public class KafkaConfig {
 
     return kafkaStreams;
 
+  }
+
+
+  @Bean
+  public NewTopic topicExample() {
+    return TopicBuilder.name(TRANSACTION_EVENT_TOPIC_NAME)
+        .partitions(16)
+        .replicas(1)
+        .build();
+  }
+
+  @Bean
+  public NewTopic topicExample2() {
+    return TopicBuilder.name(BALANCE_EVENTS_TOPIC)
+        .partitions(16)
+        .replicas(1)
+        .build();
+  }
+
+  @Bean
+  public NewTopic topicExample3() {
+    return TopicBuilder.name(COMBINED_EVENTS_TOPIC)
+        .partitions(16)
+        .replicas(1)
+        .build();
   }
 
 
@@ -359,15 +389,15 @@ public class KafkaConfig {
     private AtomicInteger counter = new AtomicInteger(0);;
 
 
-    @Override public void sendEmail(final Pair<TransactionEvent, BalanceEvent>  details) {
+    @Override public void sendEmail(final CombinedEvent  details) {
       //In a real implementation we would do something a little more useful
       log.info("counter {} ", counter.incrementAndGet());
-      log.warn("Sending email: \nCustomer:{}\nOrder: {}\n", details.getLeft(), details.getRight());
+      log.warn("Sending email: \nCustomer:{}\nOrder: {}\n", details.getBalance(), details.getTransaction());
     }
   }
 
   interface Mailer {
-    void sendEmail(Pair<TransactionEvent, BalanceEvent> details);
+    void sendEmail(CombinedEvent details);
   }
 
 

@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+option java_package = "mx.klar.test.common";
+option java_outer_classname = "Protos";
+
+import "TransactionProtos.proto";
+import "balance.proto";
+
+// Representation of a total balance per account type with breakdown per provider account in the balance event.
+message CombinedEvent {
+
+  TransactionEvent transaction = 1;
+  BalanceEvent balance = 2;
+}
